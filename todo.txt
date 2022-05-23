@@ -1,0 +1,2 @@
+Get dropdown working.
+   See Bootstrap dropdown with Rails 7 and Delete records using link_to tag --> YT.

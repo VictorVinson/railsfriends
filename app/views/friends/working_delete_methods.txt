@@ -1,0 +1,134 @@
+# The below button to delete a friend works in index.html.erb
+-----------------------------------------------------------
+	<td><%= button=_to 'Delete', friend, method: :delete, form: {data: {turbo_confirm: 'Are you sure?'}}, class: "btn btn-outline-danger btn-sm" %></td>
+
+# The below button to delete a friend works in show.html.erb
+----------------------------------------------------------
+	<!-- <%= button_to 'Delete', @friend, method: :delete, form: {data: {turbo_confirm: 'Are you sure?'}}, class: "btn btn-danger" %> THIS WAY ALSO WORKS -->
+
+# The below is how I've currently gotten links to work and I've styled them like a button.  I believe this uses the older way of achieving this.  Is this safe?  I believe the documentation recommends button_to but, as with the example below for Sign Out, sometimes needs to look like a link.
+---------------------------------------------------------------------------------------------------------
+	<%= link_to 'Delete', @friend, method: :delete, data: {confirm: 'Are you sure?'}, class: "btn btn-danger" %>
+		-- To do the above I had to 
+			1) run ./bin/importmap pin @rails/ujs
+			2) edit application.js (under javascript/controllers) with the following:
+				import Rails from "@rails/ujs"
+				Rails.start();
+
+
+TO GET SIGN OUT TO WORK:
+-------------------------
+-------------------------
+# The below method works but currently has a flaw I have yet to resolve: posts double deletes
+	<%= link_to 'Sign Out', destroy_user_session_path, data: { "turbo-method": :delete }, class:"nav-link" %>
+ # Because the above created a double delete post I've switched to the below code.  I believe the documentation recommends button_to but how to make button_to look like a link?
+
+# Current working solution to Sign Out link on navbar:
+------------------------------------------------------
+	<%= link_to 'Sign Out', destroy_user_session_path, method: :delete, data: {confirm: 'Are you sure?'}, class:"nav-link" %>
+# The code above works as desired but is this a safe method of doing this?  Does not post double deletes like the first solution to Sign Out does.
+
+
+
+FROM STACK OVERFLOW: 
+https://stackoverflow.com/questions/70474422/rails-7-link-to-with-method-delete-still-performs-get-request
+--------------------
+Using link_to:
+
+<%= link_to 'Sign Out', destroy_user_session_path, data: {turbo_method: :delete} %>
+
+Renders a simple a tag with data-turbo-method attribute. This link sends a real DELETE request.
+
+If your destroy action ends with a redirect_to, some browsers will redirect to a new location with DELETE method (causing errors), so make sure to add status: :see_other parameter to redirect_to, like the guides suggest. --> https://guides.rubyonrails.org/getting_started.html#deleting-an-article
+Confirmation
+
+If you want to add confirmation prompt to a button above:
+
+<%= button_to 'Sign Out', destroy_user_session_path, method: :delete,
+  form: {data: {turbo_confirm: 'Are you sure?'}} %>
+
+If you want to add confirmation to a link above:
+
+<%= link_to 'Sign Out', destroy_user_session_path,
+  data: {turbo_method: :delete, turbo_confirm: 'Are you sure?'} %>
+
+
+FROM THE LINK IN THE ABOVE ARTICLE
+----------------------------------
+7.5 Deleting an Article
+
+Finally, we arrive at the "D" (Delete) of CRUD. Deleting a resource is a simpler process than creating or updating. It only requires a route and a controller action. And our resourceful routing (resources :articles) already provides the route, which maps DELETE /articles/:id requests to the destroy action of ArticlesController.
+
+So, let's add a typical destroy action to app/controllers/articles_controller.rb, below the update action:
+
+class ArticlesController < ApplicationController
+  def index
+    @articles = Article.all
+  end
+
+  def show
+    @article = Article.find(params[:id])
+  end
+
+  def new
+    @article = Article.new
+  end
+
+  def create
+    @article = Article.new(article_params)
+
+    if @article.save
+      redirect_to @article
+    else
+      render :new, status: :unprocessable_entity
+    end
+  end
+
+  def edit
+    @article = Article.find(params[:id])
+  end
+
+  def update
+    @article = Article.find(params[:id])
+
+    if @article.update(article_params)
+      redirect_to @article
+    else
+      render :edit, status: :unprocessable_entity
+    end
+  end
+
+  def destroy
+    @article = Article.find(params[:id])
+    @article.destroy
+
+    redirect_to root_path, status: :see_other
+  end
+
+  private
+    def article_params
+      params.require(:article).permit(:title, :body)
+    end
+end
+
+The destroy action fetches the article from the database, and calls destroy on it. Then, it redirects the browser to the root path with status code 303 See Other.
+
+We have chosen to redirect to the root path because that is our main access point for articles. But, in other circumstances, you might choose to redirect to e.g. articles_path.
+
+Now let's add a link at the bottom of app/views/articles/show.html.erb so that we can delete an article from its own page:
+
+<h1><%= @article.title %></h1>
+
+<p><%= @article.body %></p>
+
+<ul>
+  <li><%= link_to "Edit", edit_article_path(@article) %></li>
+  <li><%= link_to "Destroy", article_path(@article), data: {
+                    turbo_method: :delete,
+                    turbo_confirm: "Are you sure?"
+                  } %></li>
+</ul>
+
+In the above code, we use the data option to set the data-turbo-method and data-turbo-confirm HTML attributes of the "Destroy" link. Both of these attributes hook into Turbo, which is included by default in fresh Rails applications. data-turbo-method="delete" will cause the link to make a DELETE request instead of a GET request. data-turbo-confirm="Are you sure?" will cause a confirmation dialog to appear when the link is clicked. If the user cancels the dialog, the request will be aborted.
+
+And that's it! We can now list, show, create, update, and delete articles! InCRUDable!
